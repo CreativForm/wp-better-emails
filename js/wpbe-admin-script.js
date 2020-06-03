@@ -1,9 +1,12 @@
-jQuery(document).ready(function($){
+;(function($){
 
 	// Send email preview
 	$('#wpbe_send_preview').on('click', this, function(e) {
 		e.preventDefault();
-		var email = $('#wpbe_email_preview_field').val(), message = $('#wpbe_preview_message'), loading = $('#wpbe_ajax_loading');
+		var email = $('#wpbe_email_preview_field').val(),
+			message = $('#wpbe_preview_message'),
+			loading = $('#wpbe_ajax_loading');
+		
 		$.ajax({
 			type: 'post',
 			url: wpbe_ajax_vars.url,
@@ -22,6 +25,7 @@ jQuery(document).ready(function($){
 				message.append(data);
 			}
 		});
+		
 	});
 
 	// Trigger help
@@ -59,4 +63,4 @@ jQuery(document).ready(function($){
 		$previewIframe.document.close();
 	});
 
-});
+}(jQuery || window.jQuery));

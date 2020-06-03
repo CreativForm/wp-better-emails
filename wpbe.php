@@ -3,7 +3,7 @@
 Plugin Name: WP Better Emails
 Plugin URI: http://wordpress.org/extend/plugins/wp-better-emails/
 Description: Beautify the default text/plain WP mails into fully customizable HTML emails.
-Version: 0.3
+Version: 0.4
 Author: Nicolas Lemoine
 Author URI: http://wordpress.org/extend/plugins/wp-better-emails/
 License: GPLv2
@@ -79,7 +79,12 @@ if ( ! class_exists( 'WP_Better_Emails' ) ) {
 
 			// Filters
 			add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'settings_link' ) );
-			add_filter( 'contextual_help',      array( $this, 'contextual_help' ), 10, 3 );
+			
+			// Contextual help for old WP versions
+			if( version_compare($wp_version,'3.3.0', '<') ) {
+				add_filter( 'contextual_help',      array( $this, 'contextual_help' ), 10, 3 );
+			}
+			
 			add_filter( 'mce_external_plugins', array( $this, 'tinymce_plugins' ) );
 			add_filter( 'mce_buttons',          array( $this, 'tinymce_buttons' ) );
 			add_filter( 'tiny_mce_before_init', array( $this, 'tinymce_config' ) );
@@ -191,10 +196,16 @@ For any requests, please contact %admin_email%';
 		 * @since 0.1
 		 */
 		function admin_menu() {
+			global $wp_version;
+			
 			$this->page = add_options_page( __( 'Email settings', 'wp-better-emails' ), __( 'WP Better Emails', 'wp-better-emails' ), 'administrator', 'wpbe_options', array( $this, 'admin_page' ) );
 
 			add_action( 'admin_print_scripts-' . $this->page, array( $this, 'admin_print_script' ) );
 			add_action( 'admin_print_styles-' . $this->page, array( $this, 'admin_print_style' ) );
+			
+			if( version_compare($wp_version,'3.3.0', '>=') ) {
+				add_action( 'load-' . $this->page, array( $this, 'admin_help_tab' ) );
+			}
 		}
 
 		/**
@@ -320,8 +331,12 @@ For any requests, please contact %admin_email%';
 
 			check_ajax_referer( 'email_preview' );
 
-			$preview_email = sanitize_email( $_POST['preview_email'] );
-
+			if(isset($_POST['preview_email'])) {
+				$preview_email = sanitize_email( $_POST['preview_email'] );
+			} else {
+				die( '<div class="error"><p>' . __( 'Email is not set', 'wp-better-emails' ) . '</p></div>' );
+			}
+			
 			if ( empty( $preview_email ) ) {
 				die( '<div class="error"><p>' . __( 'Please enter an email', 'wp-better-emails' ) . '</p></div>' );
 			}
@@ -569,9 +584,40 @@ For any requests, please contact %admin_email%';
 		function esc_textlinks( $body ) {
 			return preg_replace( '#<(https?://[^*]+)>#', '$1', $body );
 		}
+		
+		/**
+		 * Help on template variables in contextual help (WordPress version 3.3.0 and above)
+		 *
+		 * @since 0.4
+		 * @global string $page
+		 * @param string $contextual_help
+		 * @param string $screen_id
+		 * @param string $screen
+		 */
+		function admin_help_tab(){
+			$screen = get_current_screen();
+ 
+			// Add my_help_tab if current screen is My Admin Page
+			$screen->add_help_tab( array(
+				'id'    => 'wp-better-emails-help',
+				'title' => __('WP Better Emails', 'wp-better-emails'),
+				'content'   => '<p>' . __( 'Some dynamic tags can be included in your email template :', 'wp-better-emails' ) . '</p>
+					<ul>
+						<li>' . __( '<strong>%content%</strong> : will be replaced with the message content.', 'wp-better-emails' ) . '<br />
+						<span class="description"> ' . __( 'NOTE: The content tag is <strong>required</strong>, WP Better Emails will be automatically desactivated if no content tag is found.', 'wp-better-emails' ) . '</span></li>
+						<li>' . __( '<strong>%blog_url%</strong> : will be replaced with your blog URL.', 'wp-better-emails' ) . '</li>
+						<li>' . __( '<strong>%home_url%</strong> : will be replaced with your home URL.', 'wp-better-emails' ) . '</li>
+						<li>' . __( '<strong>%blog_name%</strong> : will be replaced with your blog name.', 'wp-better-emails' ) . '</li>
+						<li>' . __( '<strong>%blog_description%</strong> : will be replaced with your blog description.', 'wp-better-emails' ) . '</li>
+						<li>' . __( '<strong>%admin_email%</strong> : will be replaced with admin email.', 'wp-better-emails' ) . '</li>
+						<li>' . __( '<strong>%date%</strong> : will be replaced with current date, as formatted in <a href="options-general.php">general options</a>.', 'wp-better-emails' ) . '</li>
+						<li>' . __( '<strong>%time%</strong> : will be replaced with current time, as formatted in <a href="options-general.php">general options</a>.', 'wp-better-emails' ) . '</li>
+					</ul>',
+			) );
+		}
 
 		/**
-		 * Help on template variables in contextual help
+		 * Help on template variables in contextual help DEPRECATED after WordPress version 3.3.0
 		 *
 		 * @since 0.2
 		 * @global string $page
